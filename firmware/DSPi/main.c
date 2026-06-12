@@ -23,6 +23,7 @@
 #include "spdif_rx.h"
 #include "lg_sound_sync.h"
 #include "dac_hw_mute.h"
+#include "gpio_controls.h"
 #include "dsp_pipeline.h"
 #include "flash_clkdiv.h"
 #include "flash_storage.h"
@@ -1090,6 +1091,13 @@ void core0_init() {
         dac_hw_mute_init(&hw);
     }
 
+    // gpio controlls init
+    {
+        GpioControlsConfig gpio;
+        preset_get_gpio_controls(&gpio);
+        gpio_controls_init(&gpio);
+    }
+
     // Sync MCK library state with the just-loaded globals.  usb_sound_card_init()
     // (above) called audio_i2s_mck_setup() with the boot-default pin; if the
     // preset specifies a different mck_pin or wants mck_enabled=true, the
@@ -1266,6 +1274,9 @@ int main(void) {
         // and post-clock-restart release holds on schedule.  Two loads +
         // branches when no deadline is in flight (the steady state).
         dac_hw_mute_tick();
+
+        // polling io
+        dac_hw_mute_button_poll();
 
         // Drain USB audio ring — highest priority (only when USB is active input).
         // USB ISR pushes raw packets into the ring; we run the full DSP

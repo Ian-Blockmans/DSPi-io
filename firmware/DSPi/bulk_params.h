@@ -255,6 +255,24 @@ typedef struct __attribute__((packed)) {
 } WireDacHwMute;                     // 16 bytes
 
 // ============================================================================
+// Section 19: GPIO controls (16 bytes) — V11+
+// ============================================================================
+//
+// configuration for physical controls like buttons switches and nobs, or simple physical indicators like leds 
+// matches `GpioControlsConfig` in gpio_controls.h
+typedef struct __attribute__((packed)) {
+    uint8_t  mute_enabled;           // mute button/switch. 0 = feature off, 1 = on
+    uint8_t  mute_active_low;        // 1 = pull pin LOW to mute, 0 = pull HIGH
+    uint8_t  mute_pin;               // GPIO; 0xFF = no pin
+    uint8_t  volume_enabled;         // physical volume control. 0 = feature off, 1 = on
+    uint8_t  volume_active_low;      // 1 = pull pin LOW to adjust volume, 0 = pull HIGH
+    uint8_t  rotary;                 // 1 = rotary encoder, 0 = 2 buttons. ignore volume_active_low when using rotary encoder.
+    uint8_t  volume_up_a_pin;        // GPIO; 0xFF = no pin. pin a/clk for rotary encoder
+    uint8_t  volume_down_b_pin;      // GPIO; 0xFF = no pin. pin b/dt for rotary encoder
+    uint8_t  reserved[8];            // zero-fill
+} WireGpioControls;  
+
+// ============================================================================
 // Complete Packet
 // ============================================================================
 typedef struct __attribute__((packed)) {
@@ -276,7 +294,8 @@ typedef struct __attribute__((packed)) {
     WireLgSoundSync     lg_sound_sync;                                     //   16
     WireUserVolume      user_volume;                                       //   16
     WireDacHwMute       dac_hw_mute;                                       //   16
-} WireBulkParams;                    // Total: 2960 bytes (V10)
+    WireGpioControls    gpio_controls;                                     //   16
+} WireBulkParams;                    // Total: 2976 bytes (V11)
 
 #define WIRE_BULK_PARAMS_SIZE  sizeof(WireBulkParams)
 
