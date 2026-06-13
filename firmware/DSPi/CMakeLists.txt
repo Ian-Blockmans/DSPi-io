@@ -28,6 +28,8 @@ add_executable(DSPi
     flash_clkdiv.h
     flash_storage.c
     flash_storage.h
+    gpio_controls.c
+    gpio_controls.h
     leveller.c
     leveller.h
     lg_sound_sync.c
