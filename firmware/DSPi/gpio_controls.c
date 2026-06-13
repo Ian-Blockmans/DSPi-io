@@ -23,9 +23,9 @@ static GpioControlsConfig s_cfg;
 static uint8_t s_mute = 0;
 static bool s_pin_claimed = false;
 
-/* returns a 47 byte array with all the gpio pins that are in use. ends in GPIO_PIN_NONE(0xff) if not all pins are in use.*/
+/* returns a 48 byte array with all the gpio pins that are in use. ends in GPIO_PIN_NONE(0xff) if not all pins are in use.*/
 uint8_t* gpio_in_use_get(void){
-    uint8_t in_use[GPIO_MAX_PIN];
+    uint8_t in_use[GPIO_MAX_PIN+1];
     uint8_t index;
     DacHwMuteConfig mute_config;
     dac_hw_mute_get_config(&mute_config);
@@ -49,10 +49,10 @@ uint8_t* gpio_in_use_get(void){
 /* External pin-conflict returns true when the pin is in use */
 
 bool gpio_in_use_conflict(uint8_t pin) {
-    uint8_t in_use[GPIO_MAX_PIN];
+    uint8_t in_use[GPIO_MAX_PIN+1];
     &in_use = get_gpio_in_use();
     uint8_t index = 0;
-    while(in_use[index] != GPIO_PIN_NONE && index <= GPIO_MAX_PIN-1) {
+    while(in_use[index] != GPIO_PIN_NONE && index <= GPIO_MAX_PIN) {
         if(pin == in_use[index]){
             return true;
         }  
@@ -75,13 +75,23 @@ void dac_hw_mute_button_poll(void){
 
 static void claim_input_pin(uint8_t pin) {
     gpio_init(pin);
-    gpio_put(pin, false);
     gpio_set_dir(pin, GPIO_IN);
+    if (s_cfg.mute_active_low == 1){
+        gpio_pull_up(pin);
+    } else {
+        gpio_pull_down(pin);
+    }
     s_pin_claimed = true;
 }
 
-void gpio_controls_init(GpioControlsConfig *cfg){
+static void release_input_pin(uint8_t pin) {
+    if (!s_pin_claimed) return;
+    gpio_pull_up(pin, true);
+    s_pin_claimed = false;
+}
 
+void gpio_controls_init(GpioControlsConfig *cfg){
+    claim_input_pin(cfg.mute_in_pin);
 }
 
 void preset_get_gpio_controls(GpioControlsConfig *cfg){
@@ -99,4 +109,28 @@ void gpio_set_defaults(void){
     s_cfg.volume_rotary = GPIO_VOLUME_ROTARY
     s_cfg.volume_up_a_pin = GPIO_VOLUME_UP_A_PIN
     s_cfg.volume_down_b_pin = GPIO_VOLUME_DOWN_B_PIN
+}
+
+uint8_t gpio_controls_set_config(GpioControlsConfig *cfg){
+    /* When disabling, just release and zero-out — no other validation
+     * needed.  enabled==0 is always accepted. */
+    if (cfg->mute_enabled == 0) {
+        // zero all static vars
+        // write to flash preset
+        // write to wire
+        return PIN_CONFIG_SUCCESS;
+    }
+    if (cfg->mute_enabled > 1) return PIN_CONFIG_INVALID_OUTPUT;
+    if (cfg->mute_active_low > 1) return PIN_CONFIG_INVALID_OUTPUT;
+    if (cfg->mute_in_pin > GPIO_MAX_PIN) return PIN_CONFIG_INVALID_PIN;
+
+    if (cfg->mute_enabled == 0) {
+        // zero all static vars
+        // write to flash preset
+        // write to wire
+        return PIN_CONFIG_SUCCESS;
+    }
+    if (cfg->volume_enabled > 1) return PIN_CONFIG_INVALID_OUTPUT;
+    if (cfg->mute_active_low > 1) return PIN_CONFIG_INVALID_OUTPUT;
+    if (cfg->mute_in_pin > GPIO_MAX_PIN) return PIN_CONFIG_INVALID_PIN;
 }

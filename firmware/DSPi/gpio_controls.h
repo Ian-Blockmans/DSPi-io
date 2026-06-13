@@ -1,7 +1,11 @@
 
 #define GPIO_PIN_NONE 0xFFu
 
-#define GPIO_MAX_PIN 48 // rp2350 has 48 gpio pins, rp 2040 has 30 pins
+#if PICO_RP2350  // rp2350 has 48 gpio pins, rp 2040 has 30 pins
+    #define GPIO_MAX_PIN 47
+#else
+    #define GPIO_MAX_PIN 29
+#endif
 
 // defaults
 #define GPIO_MUTE_ENABLED_DEFAULT 1
