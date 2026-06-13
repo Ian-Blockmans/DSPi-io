@@ -1,3 +1,6 @@
+// include
+#include <stdint.h>
+#include <stdbool.h>
 
 #define GPIO_PIN_NONE 0xFFu
 #define GPIO_PIN_END 0xFEu
