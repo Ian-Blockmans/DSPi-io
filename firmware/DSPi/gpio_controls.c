@@ -11,7 +11,6 @@
 
 #include <stddef.h>
 #include <string.h>
-#include <stdint.h>
 
 
 extern uint8_t output_pins[];
