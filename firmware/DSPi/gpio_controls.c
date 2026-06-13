@@ -60,26 +60,24 @@ static void release_input_pin(uint8_t pin, uint8_t feature) {
 }
 
 static void gpio_set_defaults(void){
-    s.cfg_mute.enabled = GPIO_MUTE_ENABLED_DEFAULT
-    s.cfg_mute.active_low = GPIO_MUTE_ACTIVE_LOW_DEFAULT
-    s.cfg_mute.in_pin = GPIO_MUTE_IN_PIN
-    s.cfg_volume.enabled = GPIO_VOLUME_ENABLED_DEFAULT
-    s.cfg_volume.active_low = GPIO_VOLUME_ACTIVE_LOW_DEFAULT
-    s.cfg_volume.rotary = GPIO_VOLUME_ROTARY
-    s.cfg_volume.up_a_pin = GPIO_VOLUME_UP_A_PIN
-    s.cfg_volume.down_b_pin = GPIO_VOLUME_DOWN_B_PIN
+    s.cfg_mute.enabled = GPIO_MUTE_ENABLED_DEFAULT;
+    s.cfg_mute.active_low = GPIO_MUTE_ACTIVE_LOW_DEFAULT;
+    s.cfg_mute.in_pin = GPIO_MUTE_IN_PIN;
+    s.cfg_volume.enabled = GPIO_VOLUME_ENABLED_DEFAULT;
+    s.cfg_volume.active_low = GPIO_VOLUME_ACTIVE_LOW_DEFAULT;
+    s.cfg_volume.rotary = GPIO_VOLUME_ROTARY;
+    s.cfg_volume.up_a_pin = GPIO_VOLUME_UP_A_PIN;
+    s.cfg_volume.down_b_pin = GPIO_VOLUME_DOWN_B_PIN;
 }
 
 //global
 
-/* returns a 48 byte array with all the gpio pins that are in use. ends in GPIO_PIN_NONE(0xff) if not all pins are in use.*/
-uint8_t* gpio_in_use_get(void){
+/* returns a 48 byte array with all the gpio pins that are in use. ends in GPIO_PIN_END(0xfe) if not all pins are in use.*/
+void get_gpio_in_use(uint8_t *out){
     uint8_t in_use[GPIO_MAX_PIN+1];
-    uint8_t index;
-    DacHwMuteConfig mute_config;
-    dac_hw_mute_get_config(&mute_config);
-    memcpy(&in_use, &output_pins, sizeof(output_pins));
-    index = sizeof(output_pins);
+    uint8_t index = 0;
+    DacHwMuteConfig hw_mute_config;
+    dac_hw_mute_get_config(&hw_mute_config); // get hw mute config
     in_use[index] = i2s_bck_pin;
     index++;
     if (i2s_mck_enabled) {
@@ -88,19 +86,19 @@ uint8_t* gpio_in_use_get(void){
     }
     in_use[index] = spdif_rx_pin;
     index++;
-    in_use[index] = mute_config.pin;
+    in_use[index] = hw_mute_config.pin;
     index++;
-    in_use[index] = GPIO_PIN_NONE;
-    return in_use;
+    in_use[index] = GPIO_PIN_END;
+    out = &in_use;
 }
 
 /* External pin-conflict returns true when the pin is in use */
 
 bool gpio_in_use_conflict(uint8_t pin) {
     uint8_t in_use[GPIO_MAX_PIN+1];
-    &in_use = get_gpio_in_use();
+    get_gpio_in_use(&in_use);
     uint8_t index = 0;
-    while(in_use[index] != GPIO_PIN_NONE && index <= GPIO_MAX_PIN) {
+    while(in_use[index] != GPIO_PIN_END && index <= GPIO_MAX_PIN) {
         if(pin == in_use[index]){
             return true;
         }  
@@ -110,12 +108,12 @@ bool gpio_in_use_conflict(uint8_t pin) {
 
 void gpio_input_poll(void){
     uint8_t mute = 0;
-    if (s.cfg_mute.active_low && !gpio_get(s.cfg_mute.mute_in_pin) || !s.cfg_mute.active_low && gpio_get(s.cfg_mute.pin)){
+    if (s.cfg_mute.active_low && !gpio_get(s.cfg_mute.pin) || !s.cfg_mute.active_low && gpio_get(s.cfg_mute.pin)){
         mute = 1;
     } else {
         mute = 0;
     }
-    if (mute != s.mute){
+    if (mute != s.muted){
         notify_param_write(offsetof(WireBulkParams, user_volume.user_mute),
                sizeof(uint8_t), &mute);
     }
@@ -123,7 +121,7 @@ void gpio_input_poll(void){
     //volume ...
 }
 
-void gpio_controls_mute_init(GpioControlsMuteConfig *cfg){
+void gpio_controls_mute_init(const GpioControlsMuteConfig *cfg){
     release_input_pin(cfg->pin, GPIO_FEATURE_MUTE);
 
     if (!cfg || cfg->enabled == 0) {
@@ -153,14 +151,14 @@ void preset_get_gpio_controls_Volume(GpioControlsVolumeConfig *out){ // move to 
     memcpy(out, &s.cfg_volume, sizeof(*out));
 }
 
-uint8_t gpio_controls_mute_set_config(GpioControlsMuteConfig *cfg){
+uint8_t gpio_controls_mute_set_config(const GpioControlsMuteConfig *cfg){
     /* When disabling, just release and zero-out — no other validation
      * needed.  enabled==0 is always accepted. */
     if (cfg->enabled == 0) {
         // zero all static vars
         s.cfg_mute.enabled = 0;
         s.cfg_mute.active_low = 0;
-        s.cfg_mute.in_pin = 0;
+        s.cfg_mute.pin = 0;
         // write to flash preset
         // write to wire
         return PIN_CONFIG_SUCCESS;
