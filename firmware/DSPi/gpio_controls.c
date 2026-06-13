@@ -21,57 +21,7 @@ extern uint8_t spdif_rx_pin;
 
 static GpioStatics s = {0};
 
-/* returns a 48 byte array with all the gpio pins that are in use. ends in GPIO_PIN_NONE(0xff) if not all pins are in use.*/
-uint8_t* gpio_in_use_get(void){
-    uint8_t in_use[GPIO_MAX_PIN+1];
-    uint8_t index;
-    DacHwMuteConfig mute_config;
-    dac_hw_mute_get_config(&mute_config);
-    memcpy(&in_use, &output_pins, sizeof(output_pins));
-    index = sizeof(output_pins);
-    in_use[index] = i2s_bck_pin;
-    index++;
-    if (i2s_mck_enabled) {
-      in_use[index] = i2s_mck_pin;
-      index++;
-    }
-    in_use[index] = spdif_rx_pin;
-    index++;
-    in_use[index] = mute_config.pin;
-    index++;
-    in_use[index] = GPIO_PIN_NONE;
-    return in_use;
-}
-
-
-/* External pin-conflict returns true when the pin is in use */
-
-bool gpio_in_use_conflict(uint8_t pin) {
-    uint8_t in_use[GPIO_MAX_PIN+1];
-    &in_use = get_gpio_in_use();
-    uint8_t index = 0;
-    while(in_use[index] != GPIO_PIN_NONE && index <= GPIO_MAX_PIN) {
-        if(pin == in_use[index]){
-            return true;
-        }  
-    }
-    return false;
-}
-
-void gpio_input_poll(void){
-    uint8_t mute = 0;
-    if (s.cfg_mute.active_low && !gpio_get(s.cfg_mute.mute_in_pin) || !s.cfg_mute.active_low && gpio_get(s.cfg_mute.pin)){
-        mute = 1;
-    } else {
-        mute = 0;
-    }
-    if (mute != s.mute){
-        notify_param_write(offsetof(WireBulkParams, user_volume.user_mute),
-               sizeof(uint8_t), &mute);
-    }
-
-    //volume ...
-}
+//local
 
 static void claim_input_pin(uint8_t pin, uint8_t feature) {
     gpio_init(pin);
@@ -109,6 +59,70 @@ static void release_input_pin(uint8_t pin, uint8_t feature) {
     }
 }
 
+static void gpio_set_defaults(void){
+    s.cfg_mute.enabled = GPIO_MUTE_ENABLED_DEFAULT
+    s.cfg_mute.active_low = GPIO_MUTE_ACTIVE_LOW_DEFAULT
+    s.cfg_mute.in_pin = GPIO_MUTE_IN_PIN
+    s.cfg_volume.enabled = GPIO_VOLUME_ENABLED_DEFAULT
+    s.cfg_volume.active_low = GPIO_VOLUME_ACTIVE_LOW_DEFAULT
+    s.cfg_volume.rotary = GPIO_VOLUME_ROTARY
+    s.cfg_volume.up_a_pin = GPIO_VOLUME_UP_A_PIN
+    s.cfg_volume.down_b_pin = GPIO_VOLUME_DOWN_B_PIN
+}
+
+//global
+
+/* returns a 48 byte array with all the gpio pins that are in use. ends in GPIO_PIN_NONE(0xff) if not all pins are in use.*/
+uint8_t* gpio_in_use_get(void){
+    uint8_t in_use[GPIO_MAX_PIN+1];
+    uint8_t index;
+    DacHwMuteConfig mute_config;
+    dac_hw_mute_get_config(&mute_config);
+    memcpy(&in_use, &output_pins, sizeof(output_pins));
+    index = sizeof(output_pins);
+    in_use[index] = i2s_bck_pin;
+    index++;
+    if (i2s_mck_enabled) {
+      in_use[index] = i2s_mck_pin;
+      index++;
+    }
+    in_use[index] = spdif_rx_pin;
+    index++;
+    in_use[index] = mute_config.pin;
+    index++;
+    in_use[index] = GPIO_PIN_NONE;
+    return in_use;
+}
+
+/* External pin-conflict returns true when the pin is in use */
+
+bool gpio_in_use_conflict(uint8_t pin) {
+    uint8_t in_use[GPIO_MAX_PIN+1];
+    &in_use = get_gpio_in_use();
+    uint8_t index = 0;
+    while(in_use[index] != GPIO_PIN_NONE && index <= GPIO_MAX_PIN) {
+        if(pin == in_use[index]){
+            return true;
+        }  
+    }
+    return false;
+}
+
+void gpio_input_poll(void){
+    uint8_t mute = 0;
+    if (s.cfg_mute.active_low && !gpio_get(s.cfg_mute.mute_in_pin) || !s.cfg_mute.active_low && gpio_get(s.cfg_mute.pin)){
+        mute = 1;
+    } else {
+        mute = 0;
+    }
+    if (mute != s.mute){
+        notify_param_write(offsetof(WireBulkParams, user_volume.user_mute),
+               sizeof(uint8_t), &mute);
+    }
+
+    //volume ...
+}
+
 void gpio_controls_mute_init(GpioControlsMuteConfig *cfg){
     release_input_pin(cfg->pin, GPIO_FEATURE_MUTE);
 
@@ -123,7 +137,7 @@ void gpio_controls_mute_init(GpioControlsMuteConfig *cfg){
     if (s.cfg_mute.pin != GPIO_PIN_NONE) {
         claim_input_pin(cfg->pin, GPIO_FEATURE_MUTE);
     }
-    
+
     s.muted = false;
 }
 
@@ -137,17 +151,6 @@ void preset_get_gpio_controls_Volume(GpioControlsVolumeConfig *out){ // move to 
     gpio_set_defaults(); // remove later
     if (!out) return;
     memcpy(out, &s.cfg_volume, sizeof(*out));
-}
-
-void gpio_set_defaults(void){
-    s.cfg_mute.enabled = GPIO_MUTE_ENABLED_DEFAULT
-    s.cfg_mute.active_low = GPIO_MUTE_ACTIVE_LOW_DEFAULT
-    s.cfg_mute.in_pin = GPIO_MUTE_IN_PIN
-    s.cfg_volume.enabled = GPIO_VOLUME_ENABLED_DEFAULT
-    s.cfg_volume.active_low = GPIO_VOLUME_ACTIVE_LOW_DEFAULT
-    s.cfg_volume.rotary = GPIO_VOLUME_ROTARY
-    s.cfg_volume.up_a_pin = GPIO_VOLUME_UP_A_PIN
-    s.cfg_volume.down_b_pin = GPIO_VOLUME_DOWN_B_PIN
 }
 
 uint8_t gpio_controls_mute_set_config(GpioControlsConfig *cfg){

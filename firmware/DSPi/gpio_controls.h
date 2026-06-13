@@ -45,3 +45,10 @@ typedef struct {
     uint8_t                  pin_volume_claimed;
     GpioControlsVolumeConfig cfg_volume;
 } GpioStatics;
+
+// functions
+void gpio_controls_mute_init(const GpioControlsMuteConfig *cfg);
+void gpio_input_poll(void);
+void preset_get_gpio_controls_mute(GpioControlsMuteConfig *out);
+uint8_t* gpio_in_use_get(void);
+uint8_t gpio_controls_mute_set_config(const GpioControlsConfig *cfg);
