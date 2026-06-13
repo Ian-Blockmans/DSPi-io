@@ -106,15 +106,15 @@ bool gpio_in_use_conflict(uint8_t pin) {
 }
 
 void gpio_input_poll(void){
-    float mute = -60;
+    uint8_t mute = 0;
     if (s.cfg_mute.active_low && !gpio_get(s.cfg_mute.pin) || !s.cfg_mute.active_low && gpio_get(s.cfg_mute.pin)){
-        mute = -12;
+        mute = 1;
     } else {
-        mute = -10;
+        mute = 0;
     }
     if (mute != s.muted){
-        notify_param_write(offsetof(WireBulkParams, user_volume.user_volume_db),
-               sizeof(float), &mute);
+        notify_param_write(offsetof(WireBulkParams, user_volume.user_mute),
+                           sizeof(uint8_t), &mute);
     }
 
     //volume ...
