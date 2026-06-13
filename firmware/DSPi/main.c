@@ -1094,10 +1094,10 @@ void core0_init() {
     // gpio input init
     {
         GpioControlsMuteConfig mute;
-        preset_get_gpio_controls(&mute);
+        preset_get_gpio_controls_mute(&mute);
         gpio_controls_mute_init(&mute);
         //GpioControlsVolumeConfig volume;
-        //preset_get_gpio_controls(&volume);
+        //preset_get_gpio_controls_volume(&volume);
         //gpio_controls_volume_init(&volume);
     }
 
