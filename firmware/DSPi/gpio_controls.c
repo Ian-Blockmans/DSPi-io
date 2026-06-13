@@ -62,7 +62,7 @@ static void release_input_pin(uint8_t pin, uint8_t feature) {
 static void gpio_set_defaults(void){
     s.cfg_mute.enabled = GPIO_MUTE_ENABLED_DEFAULT;
     s.cfg_mute.active_low = GPIO_MUTE_ACTIVE_LOW_DEFAULT;
-    s.cfg_mute.pin = GPIO_MUTE_IN_PIN;
+    s.cfg_mute.pin = GPIO_IN_PIN;
     s.cfg_volume.enabled = GPIO_VOLUME_ENABLED_DEFAULT;
     s.cfg_volume.active_low = GPIO_VOLUME_ACTIVE_LOW_DEFAULT;
     s.cfg_volume.rotary = GPIO_VOLUME_ROTARY;
