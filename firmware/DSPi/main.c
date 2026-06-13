@@ -1091,11 +1091,14 @@ void core0_init() {
         dac_hw_mute_init(&hw);
     }
 
-    // gpio controlls init
+    // gpio input init
     {
-        GpioControlsConfig gpio;
-        preset_get_gpio_controls(&gpio);
-        gpio_controls_init(&gpio);
+        GpioControlsMuteConfig mute;
+        preset_get_gpio_controls(&mute);
+        gpio_controls_mute_init(&mute);
+        //GpioControlsVolumeConfig volume;
+        //preset_get_gpio_controls(&volume);
+        //gpio_controls_volume_init(&volume);
     }
 
     // Sync MCK library state with the just-loaded globals.  usb_sound_card_init()
@@ -1275,8 +1278,8 @@ int main(void) {
         // branches when no deadline is in flight (the steady state).
         dac_hw_mute_tick();
 
-        // polling io
-        dac_hw_mute_button_poll();
+        // polling gpio inputs
+        gpio_input_poll();
 
         // Drain USB audio ring — highest priority (only when USB is active input).
         // USB ISR pushes raw packets into the ring; we run the full DSP

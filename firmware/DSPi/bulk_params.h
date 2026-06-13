@@ -255,46 +255,57 @@ typedef struct __attribute__((packed)) {
 } WireDacHwMute;                     // 16 bytes
 
 // ============================================================================
-// Section 19: GPIO controls (16 bytes) — V11+
+// Section 19: GPIO mute controls (8 bytes) — V11+
 // ============================================================================
 //
-// configuration for physical controls like buttons switches and nobs, or simple physical indicators like leds 
-// matches `GpioControlsConfig` in gpio_controls.h
+// configuration for physical mute control like buttons or switches
+// matches `GpioControlsMuteConfig` in gpio_controls.h
 typedef struct __attribute__((packed)) {
-    uint8_t  mute_enabled;           // mute button/switch. 0 = feature off, 1 = on
-    uint8_t  mute_active_low;        // 1 = pull pin LOW to mute, 0 = pull HIGH
-    uint8_t  mute_pin;               // GPIO; 0xFF = no pin
-    uint8_t  volume_enabled;         // physical volume control. 0 = feature off, 1 = on
-    uint8_t  volume_active_low;      // 1 = pull pin LOW to adjust volume, 0 = pull HIGH
+    uint8_t  enabled;                // mute button/switch. 0 = feature off, 1 = on
+    uint8_t  active_low;             // 1 = pull pin LOW to mute, 0 = pull HIGH
+    uint8_t  pin;                    // GPIO; 0xFF = no pin
+    uint8_t  reserved[5];            // zero-fill
+} WireGpioControlsMute;
+
+// ============================================================================
+// Section 20: GPIO volume controls (8 bytes) — V11+
+// ============================================================================
+//
+// configuration for physical controls like buttons or nobs
+// matches `GpioControlsVolumeConfig` in gpio_controls.h
+typedef struct __attribute__((packed)) {
+    uint8_t  enabled;                // physical volume control. 0 = feature off, 1 = on
+    uint8_t  active_low;             // 1 = pull pin LOW to adjust volume, 0 = pull HIGH
     uint8_t  rotary;                 // 1 = rotary encoder, 0 = 2 buttons. ignore volume_active_low when using rotary encoder.
-    uint8_t  volume_up_a_pin;        // GPIO; 0xFF = no pin. pin a/clk for rotary encoder
-    uint8_t  volume_down_b_pin;      // GPIO; 0xFF = no pin. pin b/dt for rotary encoder
-    uint8_t  reserved[8];            // zero-fill
-} WireGpioControls;  
+    uint8_t  up_a_pin;               // GPIO; 0xFF = no pin. pin a/clk for rotary encoder
+    uint8_t  down_b_pin;             // GPIO; 0xFF = no pin. pin b/dt for rotary encoder
+    uint8_t  reserved[3];            // zero-fill
+} WireGpioControlsVolume;  
 
 // ============================================================================
 // Complete Packet
 // ============================================================================
 typedef struct __attribute__((packed)) {
-    WireHeader          header;                                          //   16
-    WireGlobalParams    global;                                          //   16
-    WireCrossfeedParams crossfeed;                                       //   16
-    WireLegacyChannels  legacy;                                          //   16
-    WireChannelDelays   delays;                                          //   44
-    WireCrosspoint      crosspoints[WIRE_MAX_INPUT_CHANNELS][WIRE_MAX_OUTPUT_CHANNELS];  // 144
-    WireOutputChannel   outputs[WIRE_MAX_OUTPUT_CHANNELS];               //  108
-    WirePinConfig       pins;                                             //    8
-    WireBandParams      eq[WIRE_MAX_CHANNELS][WIRE_MAX_BANDS];           // 2112
-    WireChannelNames    channel_names;                                    //  352
-    WireI2SConfig       i2s_config;                                       //   16
-    WireLevellerConfig  leveller;                                          //   16
-    WirePreampConfig    preamp;                                            //   16
-    WireMasterVolume    master_volume;                                     //   16
-    WireInputConfig     input_config;                                      //   16
-    WireLgSoundSync     lg_sound_sync;                                     //   16
-    WireUserVolume      user_volume;                                       //   16
-    WireDacHwMute       dac_hw_mute;                                       //   16
-    WireGpioControls    gpio_controls;                                     //   16
+    WireHeader             header;                                          //   16
+    WireGlobalParams       global;                                          //   16
+    WireCrossfeedParams    crossfeed;                                       //   16
+    WireLegacyChannels     legacy;                                          //   16
+    WireChannelDelays      delays;                                          //   44
+    WireCrosspoint         crosspoints[WIRE_MAX_INPUT_CHANNELS][WIRE_MAX_OUTPUT_CHANNELS];  // 144
+    WireOutputChannel      outputs[WIRE_MAX_OUTPUT_CHANNELS];               //  108
+    WirePinConfig          pins;                                             //    8
+    WireBandParams         eq[WIRE_MAX_CHANNELS][WIRE_MAX_BANDS];           // 2112
+    WireChannelNames       channel_names;                                    //  352
+    WireI2SConfig          i2s_config;                                       //   16
+    WireLevellerConfig     leveller;                                          //   16
+    WirePreampConfig       preamp;                                            //   16
+    WireMasterVolume       master_volume;                                     //   16
+    WireInputConfig        input_config;                                      //   16
+    WireLgSoundSync        lg_sound_sync;                                     //   16
+    WireUserVolume         user_volume;                                       //   16
+    WireDacHwMute          dac_hw_mute;                                       //   16
+    WireGpioControlsMute   gpio_controls_mute;                                //   8
+    WireGpioControlsVolume gpio_controls_volume;                              //   8
 } WireBulkParams;                    // Total: 2976 bytes (V11)
 
 #define WIRE_BULK_PARAMS_SIZE  sizeof(WireBulkParams)

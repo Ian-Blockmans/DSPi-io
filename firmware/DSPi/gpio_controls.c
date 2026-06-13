@@ -19,9 +19,7 @@ extern uint8_t i2s_mck_pin;
 extern bool    i2s_mck_enabled;
 extern uint8_t spdif_rx_pin;
 
-static GpioControlsConfig s_cfg;
-static uint8_t s_mute = 0;
-static bool s_pin_claimed = false;
+static GpioStatics s = {0};
 
 /* returns a 48 byte array with all the gpio pins that are in use. ends in GPIO_PIN_NONE(0xff) if not all pins are in use.*/
 uint8_t* gpio_in_use_get(void){
@@ -60,77 +58,133 @@ bool gpio_in_use_conflict(uint8_t pin) {
     return false;
 }
 
-void dac_hw_mute_button_poll(void){
+void gpio_input_poll(void){
     uint8_t mute = 0;
-    if (cfg.mute_active_low && !gpio_get(cfg.mute_in_pin) || !cfg.mute_active_low && gpio_get(cfg.mute_in_pin)){
+    if (s.cfg_mute.active_low && !gpio_get(s.cfg_mute.mute_in_pin) || !s.cfg_mute.active_low && gpio_get(s.cfg_mute.pin)){
         mute = 1;
     } else {
         mute = 0;
     }
-    if (mute != s_mute){
+    if (mute != s.mute){
         notify_param_write(offsetof(WireBulkParams, user_volume.user_mute),
                sizeof(uint8_t), &mute);
-    }  
+    }
+
+    //volume ...
 }
 
-static void claim_input_pin(uint8_t pin) {
+static void claim_input_pin(uint8_t pin, uint8_t feature) {
     gpio_init(pin);
     gpio_set_dir(pin, GPIO_IN);
-    if (s_cfg.mute_active_low == 1){
-        gpio_pull_up(pin);
-    } else {
-        gpio_pull_down(pin);
+    switch (feature) {
+        case GPIO_FEATURE_MUTE:
+            if (s.cfg_mute.active_low == 1){
+                gpio_pull_up(pin);
+            } else {
+                gpio_pull_down(pin);
+            }
+            s.pin_mute_claimed = true;
+            break;
+        case GPIO_FEATURE_VOLUME:
+            if (s.cfg_volume.active_low == 1){
+                gpio_pull_up(pin);
+            } else {
+                gpio_pull_down(pin);
+            }
+            s.pin_volume_claimed = true; 
+            break;
     }
-    s_pin_claimed = true;
 }
 
-static void release_input_pin(uint8_t pin) {
-    if (!s_pin_claimed) return;
+static void release_input_pin(uint8_t pin, uint8_t feature) {
+    if (!s.pin_mute_claimed && !s.pin_volume_claimed) return;
     gpio_pull_up(pin, true);
-    s_pin_claimed = false;
+    switch (feature) {
+        case GPIO_FEATURE_MUTE:
+            s.pin_mute_claimed = false;
+            break;
+        case GPIO_FEATURE_VOLUME:
+            s.pin_volume_claimed = false; 
+            break;
+    }
 }
 
-void gpio_controls_init(GpioControlsConfig *cfg){
-    claim_input_pin(cfg.mute_in_pin);
+void gpio_controls_mute_init(GpioControlsMuteConfig *cfg){
+    release_input_pin(cfg->pin, GPIO_FEATURE_MUTE);
+
+    if (!cfg || cfg->enabled == 0) {
+        memset(&s.cfg_mute, 0, sizeof(s.cfg_mute));
+        s.muted = false;
+        return;
+    }
+
+    memcpy(&s.cfg_mute, cfg, sizeof(s.cfg_mute));
+
+    if (s.cfg_mute.pin != GPIO_PIN_NONE) {
+        claim_input_pin(cfg->pin, GPIO_FEATURE_MUTE);
+    }
+    
+    s.muted = false;
 }
 
-void preset_get_gpio_controls(GpioControlsConfig *cfg){
+void preset_get_gpio_controls_mute(GpioControlsMuteConfig *out){
     gpio_set_defaults(); // remove later
     if (!out) return;
-    memcpy(out, &s_cfg, sizeof(*out));
+    memcpy(out, &s.cfg_mute, sizeof(*out));
+}
+
+void preset_get_gpio_controls_Volume(GpioControlsVolumeConfig *out){ // move to flash_storage.c
+    gpio_set_defaults(); // remove later
+    if (!out) return;
+    memcpy(out, &s.cfg_volume, sizeof(*out));
 }
 
 void gpio_set_defaults(void){
-    s_cfg.mute_enabled = GPIO_MUTE_ENABLED_DEFAULT
-    s_cfg.mute_active_low = GPIO_MUTE_ACTIVE_LOW_DEFAULT
-    s_cfg.mute_in_pin = GPIO_MUTE_IN_PIN
-    s_cfg.volume_enabled = GPIO_VOLUME_ENABLED_DEFAULT
-    s_cfg.volume_active_low = GPIO_VOLUME_ACTIVE_LOW_DEFAULT
-    s_cfg.volume_rotary = GPIO_VOLUME_ROTARY
-    s_cfg.volume_up_a_pin = GPIO_VOLUME_UP_A_PIN
-    s_cfg.volume_down_b_pin = GPIO_VOLUME_DOWN_B_PIN
+    s.cfg_mute.enabled = GPIO_MUTE_ENABLED_DEFAULT
+    s.cfg_mute.active_low = GPIO_MUTE_ACTIVE_LOW_DEFAULT
+    s.cfg_mute.in_pin = GPIO_MUTE_IN_PIN
+    s.cfg_volume.enabled = GPIO_VOLUME_ENABLED_DEFAULT
+    s.cfg_volume.active_low = GPIO_VOLUME_ACTIVE_LOW_DEFAULT
+    s.cfg_volume.rotary = GPIO_VOLUME_ROTARY
+    s.cfg_volume.up_a_pin = GPIO_VOLUME_UP_A_PIN
+    s.cfg_volume.down_b_pin = GPIO_VOLUME_DOWN_B_PIN
 }
 
-uint8_t gpio_controls_set_config(GpioControlsConfig *cfg){
+uint8_t gpio_controls_mute_set_config(GpioControlsConfig *cfg){
     /* When disabling, just release and zero-out — no other validation
      * needed.  enabled==0 is always accepted. */
-    if (cfg->mute_enabled == 0) {
+    if (cfg->enabled == 0) {
         // zero all static vars
+        s.cfg_mute.enabled = 0
+        s.cfg_mute.active_low = 0
+        s.cfg_mute.in_pin = 0
         // write to flash preset
         // write to wire
         return PIN_CONFIG_SUCCESS;
     }
-    if (cfg->mute_enabled > 1) return PIN_CONFIG_INVALID_OUTPUT;
-    if (cfg->mute_active_low > 1) return PIN_CONFIG_INVALID_OUTPUT;
-    if (cfg->mute_in_pin > GPIO_MAX_PIN) return PIN_CONFIG_INVALID_PIN;
+    if (cfg->enabled > 1) return PIN_CONFIG_INVALID_OUTPUT;
+    if (cfg->active_low > 1) return PIN_CONFIG_INVALID_OUTPUT;
+    if (cfg->pin != GPIO_PIN_NONE) {
+        if (cfg->pin > GPIO_MAX_PIN) return PIN_CONFIG_INVALID_PIN;
+        if (gpio_in_use_conflict(cfg->pin)) return PIN_CONFIG_PIN_IN_USE;
+    }
+}
 
-    if (cfg->mute_enabled == 0) {
+uint8_t gpio_controls_volume_set_config(GpioControlsConfig *cfg){
+    if (cfg->enabled == 0) {
         // zero all static vars
+        s.cfg_volume.enabled = 0
+        s.cfg_volume.active_low = 0
+        s.cfg_volume.rotary = 0
+        s.cfg_volume.up_a_pin = 0
+        s.cfg_volume.down_b_pin = 0
         // write to flash preset
         // write to wire
         return PIN_CONFIG_SUCCESS;
     }
-    if (cfg->volume_enabled > 1) return PIN_CONFIG_INVALID_OUTPUT;
-    if (cfg->mute_active_low > 1) return PIN_CONFIG_INVALID_OUTPUT;
-    if (cfg->mute_in_pin > GPIO_MAX_PIN) return PIN_CONFIG_INVALID_PIN;
+    if (cfg->enabled > 1) return PIN_CONFIG_INVALID_OUTPUT;
+    if (cfg->active_low > 1) return PIN_CONFIG_INVALID_OUTPUT;
+    if (cfg->rotary > 1) return PIN_CONFIG_INVALID_OUTPUT;
+    if (cfg->up_a_pin > GPIO_MAX_PIN) return PIN_CONFIG_INVALID_PIN;
+    if (cfg->down_b_pin > GPIO_MAX_PIN) return PIN_CONFIG_INVALID_PIN;
 }
