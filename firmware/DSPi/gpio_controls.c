@@ -158,9 +158,9 @@ uint8_t gpio_controls_mute_set_config(GpioControlsMuteConfig *cfg){
      * needed.  enabled==0 is always accepted. */
     if (cfg->enabled == 0) {
         // zero all static vars
-        s.cfg_mute.enabled = 0
-        s.cfg_mute.active_low = 0
-        s.cfg_mute.in_pin = 0
+        s.cfg_mute.enabled = 0;
+        s.cfg_mute.active_low = 0;
+        s.cfg_mute.in_pin = 0;
         // write to flash preset
         // write to wire
         return PIN_CONFIG_SUCCESS;
@@ -176,11 +176,11 @@ uint8_t gpio_controls_mute_set_config(GpioControlsMuteConfig *cfg){
 uint8_t gpio_controls_volume_set_config(GpioControlsVolumeConfig *cfg){
     if (cfg->enabled == 0) {
         // zero all static vars
-        s.cfg_volume.enabled = 0
-        s.cfg_volume.active_low = 0
-        s.cfg_volume.rotary = 0
-        s.cfg_volume.up_a_pin = 0
-        s.cfg_volume.down_b_pin = 0
+        s.cfg_volume.enabled = 0;
+        s.cfg_volume.active_low = 0;
+        s.cfg_volume.rotary = 0;
+        s.cfg_volume.up_a_pin = 0;
+        s.cfg_volume.down_b_pin = 0;
         // write to flash preset
         // write to wire
         return PIN_CONFIG_SUCCESS;
