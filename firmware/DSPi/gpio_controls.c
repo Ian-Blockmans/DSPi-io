@@ -89,14 +89,13 @@ uint8_t* get_gpio_in_use(void){
     in_use[index] = hw_mute_config.pin;
     index++;
     in_use[index] = GPIO_PIN_END;
-    return in_us;
+    return in_use;
 }
 
 /* External pin-conflict returns true when the pin is in use */
 
 bool gpio_in_use_conflict(uint8_t pin) {
     uint8_t* in_use = get_gpio_in_use();
-    get_gpio_in_use(&in_use);
     uint8_t index = 0;
     while(in_use[index] != GPIO_PIN_END && index <= GPIO_MAX_PIN) {
         if(pin == in_use[index]){
