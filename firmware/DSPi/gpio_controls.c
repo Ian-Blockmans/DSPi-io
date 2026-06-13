@@ -11,6 +11,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <stdint.h>
 
 
 extern uint8_t output_pins[];
@@ -48,7 +49,7 @@ static void claim_input_pin(uint8_t pin, uint8_t feature) {
 
 static void release_input_pin(uint8_t pin, uint8_t feature) {
     if (!s.pin_mute_claimed && !s.pin_volume_claimed) return;
-    gpio_pull_up(pin, true);
+    gpio_pull_up(pin);
     switch (feature) {
         case GPIO_FEATURE_MUTE:
             s.pin_mute_claimed = false;
@@ -62,7 +63,7 @@ static void release_input_pin(uint8_t pin, uint8_t feature) {
 static void gpio_set_defaults(void){
     s.cfg_mute.enabled = GPIO_MUTE_ENABLED_DEFAULT;
     s.cfg_mute.active_low = GPIO_MUTE_ACTIVE_LOW_DEFAULT;
-    s.cfg_mute.in_pin = GPIO_MUTE_IN_PIN;
+    s.cfg_mute.pin = GPIO_MUTE_IN_PIN;
     s.cfg_volume.enabled = GPIO_VOLUME_ENABLED_DEFAULT;
     s.cfg_volume.active_low = GPIO_VOLUME_ACTIVE_LOW_DEFAULT;
     s.cfg_volume.rotary = GPIO_VOLUME_ROTARY;
@@ -73,8 +74,8 @@ static void gpio_set_defaults(void){
 //global
 
 /* returns a 48 byte array with all the gpio pins that are in use. ends in GPIO_PIN_END(0xfe) if not all pins are in use.*/
-void get_gpio_in_use(uint8_t *out){
-    uint8_t in_use[GPIO_MAX_PIN+1];
+uint8_t* get_gpio_in_use(void){
+    static uint8_t in_use[GPIO_MAX_PIN+1];
     uint8_t index = 0;
     DacHwMuteConfig hw_mute_config;
     dac_hw_mute_get_config(&hw_mute_config); // get hw mute config
@@ -89,13 +90,13 @@ void get_gpio_in_use(uint8_t *out){
     in_use[index] = hw_mute_config.pin;
     index++;
     in_use[index] = GPIO_PIN_END;
-    out = &in_use;
+    return in_us;
 }
 
 /* External pin-conflict returns true when the pin is in use */
 
 bool gpio_in_use_conflict(uint8_t pin) {
-    uint8_t in_use[GPIO_MAX_PIN+1];
+    uint8_t* in_use = get_gpio_in_use();
     get_gpio_in_use(&in_use);
     uint8_t index = 0;
     while(in_use[index] != GPIO_PIN_END && index <= GPIO_MAX_PIN) {
