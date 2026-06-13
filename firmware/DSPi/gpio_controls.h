@@ -51,4 +51,4 @@ void gpio_controls_mute_init(const GpioControlsMuteConfig *cfg);
 void gpio_input_poll(void);
 void preset_get_gpio_controls_mute(GpioControlsMuteConfig *out);
 uint8_t* gpio_in_use_get(void);
-uint8_t gpio_controls_mute_set_config(const GpioControlsConfig *cfg);
+uint8_t gpio_controls_mute_set_config(const GpioControlsMuteConfig *cfg);

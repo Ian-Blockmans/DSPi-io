@@ -153,7 +153,7 @@ void preset_get_gpio_controls_Volume(GpioControlsVolumeConfig *out){ // move to 
     memcpy(out, &s.cfg_volume, sizeof(*out));
 }
 
-uint8_t gpio_controls_mute_set_config(GpioControlsConfig *cfg){
+uint8_t gpio_controls_mute_set_config(GpioControlsMuteConfig *cfg){
     /* When disabling, just release and zero-out — no other validation
      * needed.  enabled==0 is always accepted. */
     if (cfg->enabled == 0) {
@@ -173,7 +173,7 @@ uint8_t gpio_controls_mute_set_config(GpioControlsConfig *cfg){
     }
 }
 
-uint8_t gpio_controls_volume_set_config(GpioControlsConfig *cfg){
+uint8_t gpio_controls_volume_set_config(GpioControlsVolumeConfig *cfg){
     if (cfg->enabled == 0) {
         // zero all static vars
         s.cfg_volume.enabled = 0
